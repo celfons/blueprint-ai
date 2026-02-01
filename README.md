@@ -237,7 +237,7 @@ The workflow **automatically integrates** with GitHub Projects:
    - **✅ Ready** - After PO Agent (has `agent:po` label)
    - **💻 In Progress** - After DEV Agent (has `agent:dev` label)
    - **🧪 Testing** - After QA Agent (has `agent:qa` label)
-   - **✅ Done** - Closed issues
+   - **🎉 Done** - Closed issues
 
 ### Built-in Workflow Features
 

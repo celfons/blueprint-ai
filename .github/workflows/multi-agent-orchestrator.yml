@@ -34,7 +34,6 @@ jobs:
         with:
           project-url: ${{ vars.PROJECT_URL }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          labeled: '*'
         continue-on-error: true
   
   # Product Owner Agent
