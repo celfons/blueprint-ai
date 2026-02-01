@@ -81,9 +81,46 @@ case "$AGENT_ROLE" in
         fi
         ;;
         
+    ALL)
+        echo "🚀 Executing ALL Agents (PO → DEV → QA)..."
+        
+        # Execute PO Agent
+        echo ""
+        echo "🎯 [1/3] Executing Product Owner Agent..."
+        update_issue "$ISSUE_NUMBER" "$TEMPLATES_DIR/po-template.md" "agent:po"
+        
+        if [ "$COPILOT_ENABLED" = "true" ]; then
+            echo "💡 Copilot: Suggested enhancements for user story..."
+            gh issue comment "$ISSUE_NUMBER" --body "💡 **GitHub Copilot Suggestion**: Review the BDD scenarios and acceptance criteria added by the PO agent. Consider edge cases and non-functional requirements." || true
+        fi
+        
+        # Execute DEV Agent
+        echo ""
+        echo "💻 [2/3] Executing Developer Agent..."
+        update_issue "$ISSUE_NUMBER" "$TEMPLATES_DIR/dev-template.md" "agent:dev"
+        
+        if [ "$COPILOT_ENABLED" = "true" ]; then
+            echo "💡 Copilot: Suggested implementation approach..."
+            gh issue comment "$ISSUE_NUMBER" --body "💡 **GitHub Copilot Suggestion**: Implementation checklist has been added. Use Copilot to generate unit tests and documentation based on the acceptance criteria." || true
+        fi
+        
+        # Execute QA Agent
+        echo ""
+        echo "🧪 [3/3] Executing QA Agent..."
+        update_issue "$ISSUE_NUMBER" "$TEMPLATES_DIR/qa-template.md" "agent:qa"
+        
+        if [ "$COPILOT_ENABLED" = "true" ]; then
+            echo "💡 Copilot: Suggested test scenarios..."
+            gh issue comment "$ISSUE_NUMBER" --body "💡 **GitHub Copilot Suggestion**: Test cases have been added. Consider adding performance, security, and accessibility tests." || true
+        fi
+        
+        echo ""
+        echo "✅ All agents executed successfully!"
+        ;;
+        
     *)
         echo "❌ Unknown agent role: $AGENT_ROLE"
-        echo "Valid roles: PO, DEV, QA"
+        echo "Valid roles: PO, DEV, QA, ALL"
         exit 1
         ;;
 esac

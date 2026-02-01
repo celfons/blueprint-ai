@@ -10,7 +10,7 @@ inputs:
     description: 'GitHub token with permissions to manage issues and projects'
     required: true
   agent-role:
-    description: 'Agent role: PO, DEV, or QA'
+    description: 'Agent role: PO, DEV, QA, or ALL (to run all agents)'
     required: true
   issue-number:
     description: 'Issue number to process'
