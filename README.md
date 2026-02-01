@@ -214,14 +214,51 @@ Edit these files to customize the output for your team's needs.
 
 ## 🤝 Integration with GitHub Projects
 
-The workflow seamlessly integrates with GitHub Projects:
+The workflow **automatically integrates** with GitHub Projects:
 
-1. Create a project board with columns: "Backlog", "Ready", "In Progress", "Testing", "Done"
-2. Issues are automatically labeled by agents
-3. Use project automation rules to move issues based on labels:
-   - `agent:po` → Move to "Ready"
-   - `agent:dev` → Move to "In Progress"
-   - `agent:qa` → Move to "Testing"
+### Automatic Setup
+
+1. **Set Project URL**: Add a repository variable `PROJECT_URL` with your project URL:
+   ```
+   https://github.com/users/YOUR_USERNAME/projects/PROJECT_NUMBER
+   ```
+   or
+   ```
+   https://github.com/orgs/YOUR_ORG/projects/PROJECT_NUMBER
+   ```
+
+2. **Issue Lifecycle**: Issues are automatically:
+   - Added to the project when created
+   - Labeled as agents process them (`agent:po`, `agent:dev`, `agent:qa`)
+   - Moved through columns based on labels
+
+3. **Project Board Columns** (recommended):
+   - **📋 Backlog** - New issues
+   - **✅ Ready** - After PO Agent (has `agent:po` label)
+   - **💻 In Progress** - After DEV Agent (has `agent:dev` label)
+   - **🧪 Testing** - After QA Agent (has `agent:qa` label)
+   - **✅ Done** - Closed issues
+
+### Built-in Workflow Features
+
+- **Automatic Project Addition**: New issues are added to the project board via `actions/add-to-project`
+- **Status Comments**: Each agent posts a comment indicating project status changes
+- **Label-Based Automation**: Use GitHub Projects built-in automation to move cards based on labels
+- **Separate Integration Workflow**: The `project-integration.yml` workflow handles project-specific updates
+
+### Setup Instructions
+
+1. Create a GitHub Project (Projects tab → New project)
+2. Add the project URL to repository variables:
+   - Go to Settings → Secrets and variables → Actions → Variables
+   - Create `PROJECT_URL` with your project URL
+3. Configure project automation rules (optional but recommended):
+   - When label `agent:po` is added → Move to "Ready"
+   - When label `agent:dev` is added → Move to "In Progress"
+   - When label `agent:qa` is added → Move to "Testing"
+   - When issue is closed → Move to "Done"
+
+**Note**: If `PROJECT_URL` is not set, the workflow will continue to work but won't add issues to projects automatically.
 
 ## 💡 Best Practices
 

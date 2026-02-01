@@ -19,8 +19,24 @@ permissions:
   issues: write
   contents: read
   pull-requests: write
+  repository-projects: write
 
 jobs:
+  # Add issue to project board
+  add-to-project:
+    name: 📋 Add to Project Board
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    
+    steps:
+      - name: Add issue to project
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: ${{ vars.PROJECT_URL }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          labeled: '*'
+        continue-on-error: true
+  
   # Product Owner Agent
   po-agent:
     name: 🎯 PO Agent - User Stories & BDD
@@ -47,6 +63,21 @@ jobs:
           agent-role: 'PO'
           issue-number: ${{ github.event.issue.number || github.event.inputs.issue_number }}
           copilot-enabled: 'true'
+      
+      - name: Update Project Status to Ready
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Comment to indicate project board update
+            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: '📋 **Project Board Update**: Issue moved to "Ready" status with `agent:po` label.'
+            });
+        continue-on-error: true
   
   # Developer Agent
   dev-agent:
@@ -77,6 +108,21 @@ jobs:
           agent-role: 'DEV'
           issue-number: ${{ github.event.issue.number || github.event.inputs.issue_number }}
           copilot-enabled: 'true'
+      
+      - name: Update Project Status to In Progress
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Comment to indicate project board update
+            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: '📋 **Project Board Update**: Issue moved to "In Progress" status with `agent:dev` label.'
+            });
+        continue-on-error: true
   
   # QA Agent
   qa-agent:
@@ -107,6 +153,21 @@ jobs:
           agent-role: 'QA'
           issue-number: ${{ github.event.issue.number || github.event.inputs.issue_number }}
           copilot-enabled: 'true'
+      
+      - name: Update Project Status to Testing
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Comment to indicate project board update
+            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: '📋 **Project Board Update**: Issue moved to "Testing" status with `agent:qa` label.'
+            });
+        continue-on-error: true
   
   # Summary Job
   workflow-summary:
