@@ -67,7 +67,7 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            const issue_number = context.issue.number || (context.payload.inputs && context.payload.inputs.issue_number);
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
