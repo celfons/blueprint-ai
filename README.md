@@ -48,7 +48,7 @@ jobs:
       - uses: celfons/blueprint-ai@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          agent-role: 'PO'
+          agent-role: 'ALL'  # Use 'PO', 'DEV', 'QA', or 'ALL'
           issue-number: ${{ github.event.issue.number }}
 ```
 
@@ -84,6 +84,7 @@ Trigger specific agents by commenting on an issue:
 /agent po   # Trigger PO Agent
 /agent dev  # Trigger DEV Agent
 /agent qa   # Trigger QA Agent
+/agent all  # Trigger ALL Agents (PO → DEV → QA)
 ```
 
 Or use the workflow dispatch:
@@ -92,6 +93,16 @@ Or use the workflow dispatch:
 gh workflow run multi-agent-orchestrator.yml \
   -f issue_number=123 \
   -f agent=ALL
+```
+
+You can also use the action directly with ALL option:
+
+```yaml
+- uses: celfons/blueprint-ai@v1
+  with:
+    github-token: ${{ secrets.GITHUB_TOKEN }}
+    agent-role: 'ALL'
+    issue-number: ${{ github.event.issue.number }}
 ```
 
 ## 🏗️ Architecture
@@ -182,7 +193,7 @@ gh workflow run multi-agent-orchestrator.yml \
 | Input | Description | Required | Default |
 |-------|-------------|----------|---------|
 | `github-token` | GitHub token with issues write permission | Yes | - |
-| `agent-role` | Agent to execute: PO, DEV, or QA | Yes | - |
+| `agent-role` | Agent to execute: PO, DEV, QA, or ALL (runs all agents sequentially) | Yes | - |
 | `issue-number` | Issue number to process | No | Current issue |
 | `copilot-enabled` | Enable Copilot integration | No | `true` |
 
