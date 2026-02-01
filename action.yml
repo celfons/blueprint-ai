@@ -1,0 +1,44 @@
+name: 'Blueprint AI - Multi-Agent Workflow'
+description: 'Orchestrates PO, DEV, and QA agents to work on GitHub Project issues using GitHub Copilot'
+author: 'celfons'
+branding:
+  icon: 'cpu'
+  color: 'blue'
+
+inputs:
+  github-token:
+    description: 'GitHub token with permissions to manage issues and projects'
+    required: true
+  agent-role:
+    description: 'Agent role: PO, DEV, or QA'
+    required: true
+  issue-number:
+    description: 'Issue number to process'
+    required: false
+  copilot-enabled:
+    description: 'Enable GitHub Copilot integration for enhanced agent capabilities'
+    required: false
+    default: 'true'
+
+outputs:
+  result:
+    description: 'Result of the agent execution'
+  
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Execute Agent Workflow
+      shell: bash
+      run: |
+        echo "Executing ${{ inputs.agent-role }} agent workflow..."
+        bash ${{ github.action_path }}/scripts/orchestrator.sh "${{ inputs.agent-role }}" "${{ inputs.issue-number }}" "${{ inputs.copilot-enabled }}"
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}

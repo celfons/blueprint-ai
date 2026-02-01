@@ -1,0 +1,230 @@
+name: Multi-Agent Workflow Orchestrator
+
+on:
+  issues:
+    types: [opened, labeled]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+      agent:
+        description: 'Agent to execute (PO, DEV, QA, or ALL)'
+        required: true
+        default: 'ALL'
+
+permissions:
+  issues: write
+  contents: read
+  pull-requests: write
+  repository-projects: write
+
+jobs:
+  # Add issue to project board
+  add-to-project:
+    name: 📋 Add to Project Board
+    runs-on: ubuntu-latest
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    
+    steps:
+      - name: Add issue to project
+        uses: actions/add-to-project@v0.5.0
+        with:
+          project-url: ${{ vars.PROJECT_URL }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+  
+  # Product Owner Agent
+  po-agent:
+    name: 🎯 PO Agent - User Stories & BDD
+    runs-on: ubuntu-latest
+    if: |
+      (github.event_name == 'issues' && github.event.action == 'opened') ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/agent po')) ||
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'PO' || github.event.inputs.agent == 'ALL'))
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup GitHub CLI
+        run: |
+          gh --version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Execute PO Agent
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          agent-role: 'PO'
+          issue-number: ${{ github.event.issue.number || github.event.inputs.issue_number }}
+          copilot-enabled: 'true'
+      
+      - name: Update Project Status to Ready
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Comment to indicate project board update
+            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: '📋 **Project Board Update**: Issue moved to "Ready" status with `agent:po` label.'
+            });
+        continue-on-error: true
+  
+  # Developer Agent
+  dev-agent:
+    name: 💻 DEV Agent - Implementation & Tests
+    runs-on: ubuntu-latest
+    needs: po-agent
+    if: |
+      always() &&
+      (needs.po-agent.result == 'success' || needs.po-agent.result == 'skipped') &&
+      ((github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'agent:po')) ||
+       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/agent dev')) ||
+       (github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'DEV' || github.event.inputs.agent == 'ALL')))
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup GitHub CLI
+        run: |
+          gh --version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Execute DEV Agent
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          agent-role: 'DEV'
+          issue-number: ${{ github.event.issue.number || github.event.inputs.issue_number }}
+          copilot-enabled: 'true'
+      
+      - name: Update Project Status to In Progress
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Comment to indicate project board update
+            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: '📋 **Project Board Update**: Issue moved to "In Progress" status with `agent:dev` label.'
+            });
+        continue-on-error: true
+  
+  # QA Agent
+  qa-agent:
+    name: 🧪 QA Agent - Test Cases
+    runs-on: ubuntu-latest
+    needs: dev-agent
+    if: |
+      always() &&
+      (needs.dev-agent.result == 'success' || needs.dev-agent.result == 'skipped') &&
+      ((github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'agent:dev')) ||
+       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '/agent qa')) ||
+       (github.event_name == 'workflow_dispatch' && (github.event.inputs.agent == 'QA' || github.event.inputs.agent == 'ALL')))
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup GitHub CLI
+        run: |
+          gh --version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Execute QA Agent
+        uses: ./
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          agent-role: 'QA'
+          issue-number: ${{ github.event.issue.number || github.event.inputs.issue_number }}
+          copilot-enabled: 'true'
+      
+      - name: Update Project Status to Testing
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            // Comment to indicate project board update
+            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: '📋 **Project Board Update**: Issue moved to "Testing" status with `agent:qa` label.'
+            });
+        continue-on-error: true
+  
+  # Summary Job
+  workflow-summary:
+    name: 📊 Workflow Summary
+    runs-on: ubuntu-latest
+    needs: [po-agent, dev-agent, qa-agent]
+    if: always()
+    
+    steps:
+      - name: Post Summary Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue_number = context.issue.number || context.payload.inputs.issue_number;
+            const po_result = '${{ needs.po-agent.result }}';
+            const dev_result = '${{ needs.dev-agent.result }}';
+            const qa_result = '${{ needs.qa-agent.result }}';
+            
+            const getEmoji = (result) => {
+              if (result === 'success') return '✅';
+              if (result === 'failure') return '❌';
+              if (result === 'skipped') return '⏭️';
+              return '⬜';
+            };
+            
+            const summary = `
+            ## 🤖 Multi-Agent Workflow Summary
+            
+            | Agent | Status | Description |
+            |-------|--------|-------------|
+            | 🎯 PO Agent | ${getEmoji(po_result)} ${po_result} | User Stories, BDD, Acceptance Criteria |
+            | 💻 DEV Agent | ${getEmoji(dev_result)} ${dev_result} | Implementation Plan, Unit Tests, Documentation |
+            | 🧪 QA Agent | ${getEmoji(qa_result)} ${qa_result} | Test Cases, QA Plan |
+            
+            ---
+            
+            ### 🚀 Next Steps
+            
+            ${po_result === 'success' ? '- ✅ PO Agent has added user stories and acceptance criteria\n' : ''}
+            ${dev_result === 'success' ? '- ✅ DEV Agent has added implementation plan and test structure\n' : ''}
+            ${qa_result === 'success' ? '- ✅ QA Agent has added test cases and QA plan\n' : ''}
+            
+            ### 💡 Commands
+            
+            You can manually trigger individual agents by commenting:
+            - \`/agent po\` - Run PO Agent
+            - \`/agent dev\` - Run DEV Agent  
+            - \`/agent qa\` - Run QA Agent
+            
+            ---
+            
+            *Powered by Blueprint AI with GitHub Copilot integration*
+            `;
+            
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue_number,
+              body: summary
+            });
